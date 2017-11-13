@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html ng-app="kaleidoscope">
+<meta charset="utf-8">
+<title>Kaleidoscope</title>
+<head>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.12/d3.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.5/angular.min.js"></script>
+  <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/angular_material/1.0.0/angular-material.min.css">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script>
+    var kaleidoscope = angular.module('kaleidoscope', ['ngMaterial']);
+    kaleidoscope.controller('KaleidoscopeController', function($scope, $mdDialog) {
+      var self = this;
+      console.log('CONTROLLER RUNNING');
+      self.maxRadius = 60;
+      self.opacity = 70;
+      self.min = {
+        red: 0,
+        green: 0,
+        blue: 0
+      };
+      self.max = {
+        red: 1,
+        green: 1,
+        blue: 1
+      }
+      var MAX_ROW = 75;
+      var MAX_CIRCLES = MAX_ROW * 21;
+      var DURATION = 3000;
+      var dataset = [];
+
+      $scope.$watch(function(scope) {
+        return(self.max.red);
+      }, function(newValue, oldValue) {
+        if(self.min.red > newValue) {
+          self.min.red = newValue - 1;
+        }
+      });
+      $scope.$watch(function(scope) {
+        return(self.min.red);
+      }, function(newValue, oldValue) {
+        if(self.max.red < newValue) {
+          self.max.red = newValue + 1;
+        }
+      });
+      $scope.$watch(function(scope) {
+        return(self.max.blue);
+      }, function(newValue, oldValue) {
+        if(self.min.blue > newValue) {
+          self.min.blue = newValue - 1;
+        }
+      });
+      $scope.$watch(function(scope) {
+        return(self.min.blue);
+      }, function(newValue, oldValue) {
+        if(self.max.blue < newValue) {
+          self.max.blue = newValue + 1;
+        }
+      });
+      $scope.$watch(function(scope) {
+        return(self.max.green);
+      }, function(newValue, oldValue) {
+        if(self.min.green > newValue) {
+          self.min.green = newValue - 1;
+        }
+      });
+      $scope.$watch(function(scope) {
+        return(self.min.green);
+      }, function(newValue, oldValue) {
+        if(self.max.green < newValue) {
+          self.max.green = newValue + 1;
+        }
+      });
+      for(var i=0; i<MAX_CIRCLES; i++){
+          dataset.push(Math.round(Math.random() * self.maxRadius));
+      }
+      var svg = d3.select("body")
+          .append("svg")
+          .attr("width", 1900)
+          .attr("height", 1060);
+      var myCircle = svg.selectAll('circle')
+          .data(dataset)
+          .enter()
+          .append("circle")
+          .style("stroke", "none")
+          .style('opacity', self.opacity)
+          .style("fill", function() {
+            return getRandomColor();
+          })
+          .attr("r", function(d, i) {return d})
+          .attr("cx", function(d,i) {
+            return 25 + (i% MAX_ROW * 25);
+          })
+          .attr("cy", function(d, i) {
+            return 50 * (Math.floor(i / MAX_ROW) + 1);
+          });
+
+      tick();
+      setInterval(function() {
+        tick();
+      }, DURATION);
+
+      function getRandomColorComponent(min, max) {
+        var range = max - min;
+        var r = Math.floor(Math.random() * range);
+        var h = (min + r).toString(16);
+        return h.length === 1 ? '0' + h : h;
+      }
+      function getRandomColor() {
+        var red = getRandomColorComponent(self.min.red, self.max.red);
+        var green = getRandomColorComponent(self.min.green, self.max.green);
+        var blue = getRandomColorComponent(self.min.blue, self.max.blue);
+        return '#' + red + green + blue;
+      }
+      function getRandomColor2() {
+          var letters = '0123456789ABCDEF'.split('');
+          var color = '#';
+          for (var i = 0; i < 6; i++ ) {
+              color += letters[Math.floor(Math.random() * 16)];
+          }
+          return color;
+      }
+
+      function tick() {
+        for(var i=0; i < MAX_CIRCLES; i++) {
+            dataset[i] = Math.round(Math.random()*self.maxRadius);
+        }
+        myCircle
+          .data(dataset)
+          .transition()
+          .ease('easeInOutCirc')
+          .style("fill", function() {
+            return getRandomColor();
+          })
+          .style('opacity', self.opacity/100)
+          .attr('r', function(d, i) {return d})
+          .duration(DURATION);
+      }
+    });
+  </script>
+</head>
+<body ng-controller="KaleidoscopeController as model">
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.5/angular-animate.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.5/angular-aria.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/angular_material/1.0.0/angular-material.min.js"></script>
+  <div style="display:inline; position: absolute; width: 100%">
+    <md-slider flex min="0" max="255" ng-model="model.maxRadius" class></md-slider>
+    <md-slider flex min="0" max="100" ng-model="model.opacity" class></md-slider>
+    <md-slider flex min="0" max="254" ng-model="model.min.red" class></md-slider>
+    <md-slider flex min="1" max="255" ng-model="model.max.red" class></md-slider>
+    <md-slider flex min="0" max="254" ng-model="model.min.blue" class></md-slider>
+    <md-slider flex min="1" max="255" ng-model="model.max.blue" class></md-slider>
+    <md-slider flex min="0" max="254" ng-model="model.min.green" class></md-slider>
+    <md-slider flex min="1" max="255" ng-model="model.max.green" class></md-slider>
+  </div>
+</body>
+</html>
