@@ -1,87 +1,98 @@
 <!DOCTYPE html>
-<meta charset="utf-8">
-<style>
-
-.link {
-  stroke: #000;
-  stroke-width: 1.5px;
-}
-
-.node {
-  fill: #000;
-  stroke: #fff;
-  stroke-width: 1.5px;
-}
-
-.node.a { fill: #1f77b4; }
-.node.b { fill: #ff7f0e; }
-.node.c { fill: #2ca02c; }
-
-</style>
-<body>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.12/d3.js"></script>
+<svg width="960" height="1000"></svg>
+<script src="https://d3js.org/d3.v4.min.js"></script>
 <script>
 
-var width = 960,
-    height = 500;
+var svg = d3.select("svg"),
+    width = +svg.attr("width"),
+    height = +svg.attr("height"),
+    color = d3.scaleOrdinal(d3.schemeCategory10);
 
-var color = d3.scale.category10();
-
-var nodes = [],
+var a = {id: "a", fx: 0, fy: -400},
+    b = {id: "b", fx: 0, fy: 0},
+    c = {id: "c", fx: 0, fy: 300},
+    nodes = [];
+    stations = [a, b, c],
+    queueA = [];
+    queueB = [];
+    queueC = [];
     links = [];
+    linksA = [];
+    linksB = [];
+    linksC = [];
 
-var force = d3.layout.force()
-    .nodes(nodes)
-    .links(links)
-    .charge(-400)
-    .linkDistance(120)
-    .size([width, height])
-    .on("tick", tick);
+var simulation = d3.forceSimulation(nodes)
+    // .force("charge", d3.forceManyBody().strength(-500))
+    .force("charge", d3.forceManyBody().strength(-1))
+    // .force("link", d3.forceLink(links).distance(150))
+    .force("link", d3.forceLink(links).strength(0.05))
+    // .force("x", d3.forceX())
+    // .force("y", d3.forceY())
+    .alphaTarget(1)
+    .on("tick", ticked);
 
-var svg = d3.select("body").append("svg")
-    .attr("width", width)
-    .attr("height", height);
+var g = svg.append("g").attr("transform", "translate(" + width / 2 + "," + height / 2 + ")"),
+    // link = g.append("g").attr("stroke", "#000").attr("stroke-width", 1.5).selectAll(".link"),
+    link = g.append("g").selectAll(".link"), // .attr("stroke", "#000").attr("stroke-width", 1.5).selectAll(".link"),
+    node = g.append("g").attr("stroke", "#fff").attr("stroke-width", 1.5).selectAll(".node");
 
-var node = svg.selectAll(".node"),
-    link = svg.selectAll(".link");
+restart();
 
-// 1. Add three nodes and three links.
-setTimeout(function() {
-  var a = {id: "a"}, b = {id: "b"}, c = {id: "c"};
-  nodes.push(a, b, c);
-  links.push({source: a, target: b}, {source: a, target: c}, {source: b, target: c});
-  start();
-}, 0);
+let i = 0;
+d3.interval(function() {
+  const newNode = {id: 'new' + i, x: 0, y: -500};
+  queueA.push(newNode);
+  linksA.push({source: a, target: newNode});
+  i++;
+  nodes = [...stations, ...queueA, ...queueB, ...queueC];
+  links = [...linksA, ...linksB, ...linksC];
+  restart();
+}, 250);
 
-// 2. Remove node B and associated links.
-setTimeout(function() {
-  nodes.splice(1, 1); // remove b
-  links.shift(); // remove a-b
-  links.pop(); // remove b-c
-  start();
-}, 3000);
+d3.interval(function() {
+  queueB.push(queueA.shift());
+  const l = linksA.shift();
+  linksB.push({source: b, target: l.target});
+  restart();
+}, 250, d3.now() + 5000);
 
-// Add node B back.
-setTimeout(function() {
-  var a = nodes[0], b = {id: "b"}, c = nodes[1];
-  nodes.push(b);
-  links.push({source: a, target: b}, {source: b, target: c});
-  start();
-}, 6000);
+d3.interval(function() {
+  queueC.push(queueB.shift());
+  const l = linksB.shift();
+  linksC.push({source: c, target: l.target});
+  restart();
+}, 250, d3.now() + 10000);
 
-function start() {
-  link = link.data(force.links(), function(d) { return d.source.id + "-" + d.target.id; });
-  link.enter().insert("line", ".node").attr("class", "link");
-  link.exit().remove();
+// exit
+d3.interval(function() {
+  if(queueC.length > 200) {
+    for(i = 0; i <= 200; i++) {
+      queueC.shift();
+      linksC.shift();
+    }
+  }
+  restart();
+}, 5000, d3.now() + 15000);
 
-  node = node.data(force.nodes(), function(d) { return d.id;});
-  node.enter().append("circle").attr("class", function(d) { return "node " + d.id; }).attr("r", 8);
+function restart() {
+
+  // Apply the general update pattern to the nodes.
+  node = node.data(nodes, function(d) { return d.id;});
   node.exit().remove();
+  node = node.enter().append("circle").attr("fill", function(d) { return color(d.id); }).attr("r", 3).merge(node);
 
-  force.start();
+  // Apply the general update pattern to the links.
+  link = link.data(links, function(d) { return d.source.id + "-" + d.target.id; });
+  link.exit().remove();
+  link = link.enter().append("line").merge(link);
+
+  // Update and restart the simulation.
+  simulation.nodes(nodes);
+  simulation.force("link").links(links);
+  simulation.alpha(1).restart();
 }
 
-function tick() {
+function ticked() {
   node.attr("cx", function(d) { return d.x; })
       .attr("cy", function(d) { return d.y; })
 
@@ -92,4 +103,3 @@ function tick() {
 }
 
 </script>
-</body>
