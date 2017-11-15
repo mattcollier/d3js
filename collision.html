@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<body>
+<script src="https://d3js.org/d3.v4.js"></script>
+<script src="lib/d3-bboxCollide.js"></script>
+<script>
+
+var width = 960,
+    height = 500;
+
+var canvas = d3.select("body").append("canvas")
+    .attr("width", width)
+    .attr("height", height);
+
+var context = canvas.node().getContext("2d");
+
+var nodes = d3.range(200).map(function() { return {r: Math.random() * 12 + 4}; }),
+    root = nodes[0];
+var color = d3.scaleOrdinal().range(d3.schemeCategory20);
+
+root.radius = 0;
+root.fixed = true;
+
+const radiusCollide = d3.forceCollide().radius((d, i) => {
+  if(d === root) {
+    return 100;//Math.random() * 50 + 100;
+  }
+  return d.r + 3;//0.5;
+}).iterations(5);
+
+const boxCollide = d3.bboxCollide((d, i) => {
+  //return [[-d.r, -d.r],[d.r, d.r]];
+  return [[0, 0], [0, 0]];
+});
+
+var force = d3.forceSimulation()
+    .velocityDecay(0.2)
+    .force('x', d3.forceX(width / 2).strength(0.015))
+    .force('y', d3.forceY(height / 2).strength(0.015))
+    .force('collide', radiusCollide)
+//    .force('collide', isolate(boxCollide, () => true))
+/*    .force('collide', isolate(radiusCollide, (d, i) => {
+      return i % 2 === 0;
+    }))*/
+/*    .force('collide', isolate(boxCollide, (d, i) => {
+      return i % 2 === 1;
+    }))*/
+/*    .force("charge", d3.forceManyBody()
+//                      .strength(-0.8)
+                      .distanceMin(0)
+                      .distanceMax(50))*/
+    .nodes(nodes)
+    .on("tick", ticked);
+
+const minX = width / 3;
+const maxX = width - minX;
+const minY = 0;//height / 4;
+const maxY = height - minY;
+
+function ticked(e) {
+  var i,
+      d,
+      n = nodes.length;
+
+  context.clearRect(0, 0, width, height);
+//  context.fillStyle = "steelblue";
+//  context.beginPath();
+  for (i = 1; i < n; ++i) {
+    d = nodes[i];
+    d.x = Math.max(minX + d.r, Math.min(d.x, maxX - d.r));
+    d.y = Math.max(minY + d.r, Math.min(d.y, maxY - d.r));
+    context.beginPath();
+    context.moveTo(d.x, d.y);
+    context.arc(d.x, d.y, d.r, 0, 2 * Math.PI);
+    context.fillStyle = color(i % 3);
+    context.fill();
+  }
+//  context.fill();
+}
+
+canvas.on("mousemove", function() {
+  var p1 = d3.mouse(this);
+  root.fx = p1[0];
+  root.fy = p1[1];
+  force.alphaTarget(0.5).restart();
+});
+
+</script>
