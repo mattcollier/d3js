@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+  </head>
+  <body>
+    <canvas height="100%" width="100%"></canvas>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <script>
+      const canvas = document.querySelector("canvas");
+      canvas.width = 1280; // tuned for large force diagrams
+      canvas.height = 1024;
+      // canvas.width = (window.innerWidth*4) || 960; // tuned for large force diagrams
+      // canvas.height = (window.innerHeight*4) || 500;
+      var context = canvas.getContext("2d"),
+          width = canvas.width,
+          height = canvas.height;
+
+      const pointWidth = 4;
+      // const pointHeight = 4;
+
+      const numPoints = 7000;
+      const colorScale = d3.scaleSequential(d3.interpolateViridis)
+        .domain([numPoints - 1, 0]);
+
+      // generate the array of points with a unique ID and color
+      const points = d3.range(numPoints).map(index => ({
+        id: index,
+        color: colorScale(index),
+      }));
+
+      gridLayout(points, 10, width);
+      draw();
+
+      for(let i = 0; i < points.length; i++) {
+        points[i].sx = points[i].x;
+        points[i].sy = points[i].y;
+        points[i].tx = 1000;
+        points[i].ty = 1000;
+        points[i].tStart = Date.now();
+      }
+
+      const duration = 10000;
+      const ease = d3.easeCubic;
+      const timerStart = Date.now();
+      timer = d3.timer(elapsed => {
+        const now = Date.now();
+        points.forEach(point => {
+          if(point.tx) {
+            const delta = point.tStart - timerStart;
+            const e = now - point.tStart;
+            // const t = Math.min(1, ease(e / duration));
+            const t = Math.min(1, e / duration);
+
+            point.x = point.sx * (1 - t) + point.tx * t;
+            point.y = point.sy * (1 - t) + point.ty * t;
+          }
+        });
+        draw();
+      })
+
+      function gridLayout(points, pointWidth, gridWidth) {
+        const pointHeight = pointWidth;
+        const pointsPerRow = Math.floor(gridWidth / pointWidth);
+        const numRows = points.length / pointsPerRow;
+
+        points.forEach((point, i) => {
+          point.x = pointWidth * (i % pointsPerRow);
+          point.y = pointHeight * Math.floor(i / pointsPerRow);
+        });
+
+        return points;
+      }
+      // draw the points based on their current layout
+      function draw() {
+        // const ctx = canvas.node().getContext('2d');
+        // ctx.save();
+
+        // erase what is on the canvas currently
+        context.clearRect(0, 0, width, height);
+
+        // draw each point as a rectangle
+        for (let i = 0; i < points.length; ++i) {
+          const point = points[i];
+          context.fillStyle = point.color;
+          context.fillRect(point.x, point.y, pointWidth, pointWidth);
+        }
+
+        // context.restore();
+      }
+
+
+    </script>
+  </body>
+</html>
